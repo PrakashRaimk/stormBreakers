@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mic Recorder</title>
+</head>
+<body>
+  <h1>Voice Recorder</h1>
+  <button onclick="startRecording()">Start</button>
+  <button onclick="stopRecording()">Stop</button>
+  <p id="result"></p>
+
+  <script src="{{ url_for('static', filename='js/recorder.js') }}"></script>
+  <script>
+    let recorder;
+    let audioStream;
+
+    async function startRecording() {
+      audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const input = audioContext.createMediaStreamSource(audioStream);
+
+      recorder = new Recorder(input, { type: 'audio/wav' });
+      recorder.record();
+      console.log("Recording...");
+    }
+
+    function stopRecording() {
+      recorder.stop();
+      audioStream.getAudioTracks()[0].stop();
+
+      recorder.exportWAV(blob => {
+        const formData = new FormData();
+        formData.append('audio', blob, 'recording.wav');
+
+        fetch('/upload', {
+          method: 'POST',
+          body: formData
+        }).then(res => res.text())
+          .then(data => {
+            document.getElementById("result").innerText = data;
+          });
+      });
+    }
+  </script>
+</body>
+</html>
